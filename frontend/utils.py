@@ -1,4 +1,4 @@
-from codeinterpreterapi import CodeInterpreterSession
+from code_interpreter_api import CodeInterpreterSession
 import streamlit as st
 import tempfile
 import os

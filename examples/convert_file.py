@@ -1,4 +1,4 @@
-from codeinterpreterapi import CodeInterpreterSession, File
+from code_interpreter_api import CodeInterpreterSession, File
 
 
 async def main():

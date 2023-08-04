@@ -1,2 +1,0 @@
-from codeinterpreterapi.session import CodeInterpreterSession
-from codeinterpreterapi.schema import File

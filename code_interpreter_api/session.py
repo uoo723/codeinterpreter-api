@@ -12,19 +12,19 @@ from langchain.prompts.chat import MessagesPlaceholder
 from langchain.agents import AgentExecutor, BaseSingleActionAgent, ConversationalChatAgent, ConversationalAgent
 from langchain.memory import ConversationBufferMemory
 
-from codeinterpreterapi.config import settings
-from codeinterpreterapi.agents import OpenAIFunctionsAgent
-from codeinterpreterapi.prompts import code_interpreter_system_message
-from codeinterpreterapi.chains import get_file_modifications, remove_download_link
-from codeinterpreterapi.utils import CodeCallbackHandler, CodeAgentOutputParser, CodeChatAgentOutputParser
-from codeinterpreterapi.schema import CodeInterpreterResponse, CodeInput, File, UserRequest
+from code_interpreter_api.config import settings
+from code_interpreter_api.agents import OpenAIFunctionsAgent
+from code_interpreter_api.prompts import code_interpreter_system_message
+from code_interpreter_api.chains import get_file_modifications, remove_download_link
+from code_interpreter_api.utils import CodeCallbackHandler, CodeAgentOutputParser, CodeChatAgentOutputParser
+from code_interpreter_api.schema import CodeInterpreterResponse, CodeInput, File, UserRequest
 
 
 class CodeInterpreterSession:
     def __init__(
-        self, 
-        llm: Optional[BaseLanguageModel] = None, 
-        additional_tools: list[BaseTool] = [], 
+        self,
+        llm: Optional[BaseLanguageModel] = None,
+        additional_tools: list[BaseTool] = [],
         **kwargs
     ) -> None:
         self.codebox = CodeBox()
@@ -37,7 +37,7 @@ class CodeInterpreterSession:
 
     def start(self) -> None:
         self.codebox.start()
-    
+
     async def astart(self) -> None:
         if type(self.codebox) != CodeBox:
             # check if jupyter-kernel-gateway is installed
@@ -53,7 +53,7 @@ class CodeInterpreterSession:
         await self.codebox.astart()
 
     def _tools(
-        self, 
+        self,
         additional_tools: list[BaseTool]
     ) -> list[BaseTool]:
         return additional_tools + [
@@ -80,8 +80,8 @@ class CodeInterpreterSession:
     ) -> BaseChatModel:
         if "gpt" in model:
             openai_api_key = (
-                openai_api_key 
-                or settings.OPENAI_API_KEY 
+                openai_api_key
+                or settings.OPENAI_API_KEY
                 or getenv("OPENAI_API_KEY", None)
             )
             if openai_api_key is None:
@@ -164,7 +164,7 @@ class CodeInterpreterSession:
                 ):
                     await self.codebox.ainstall(package.group(1))
                     return f"{package.group(1)} was missing but got installed now. Please try again."
-            else: 
+            else:
                 # TODO: preanalyze error to optimize next code generation
                 pass
             if self.verbose:

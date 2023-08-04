@@ -11,7 +11,7 @@ from typing import Any
 
 from langchain.tools import tool, BaseTool
 
-from codeinterpreterapi import CodeInterpreterSession
+from code_interpreter_api import CodeInterpreterSession
 
 
 class ExampleKnowledgeBaseTool(BaseTool):

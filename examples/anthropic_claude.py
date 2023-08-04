@@ -1,6 +1,6 @@
 import asyncio
 from langchain.chat_models.anthropic import ChatAnthropic
-from codeinterpreterapi import CodeInterpreterSession
+from code_interpreter_api import CodeInterpreterSession
 
 
 async def run_with_claude():

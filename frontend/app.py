@@ -2,7 +2,7 @@ import asyncio
 
 import streamlit as st
 
-from codeinterpreterapi import File
+from code_interpreter_api import File
 from frontend.utils import get_images
 
 # Page configuration

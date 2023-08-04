@@ -6,7 +6,7 @@ from langchain.chat_models.openai import ChatOpenAI
 from langchain.chat_models.anthropic import ChatAnthropic
 from langchain.schema import AIMessage, OutputParserException
 
-# from codeinterpreterapi.prompts import extract_code_prompt
+# from code_interpreter_api.prompts import extract_code_prompt
 
 
 async def extract_python_code(
@@ -15,11 +15,11 @@ async def extract_python_code(
     retry: int = 2,
 ) -> Optional[str]:
     pass
-    
+
 
 async def test():
     llm = ChatAnthropic(model="claude-1.3")  # type: ignore
-    
+
     code = \
         """
         import matplotlib.pyplot as plt
@@ -34,9 +34,9 @@ async def test():
 
         plt.show()
         """
-    
+
     print(await extract_python_code(code, llm))
-    
+
 
 if __name__ == "__main__":
     import asyncio, dotenv

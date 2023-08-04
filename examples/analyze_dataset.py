@@ -1,4 +1,4 @@
-from codeinterpreterapi import CodeInterpreterSession, File
+from code_interpreter_api import CodeInterpreterSession, File
 
 
 async def main():
@@ -9,7 +9,7 @@ async def main():
         files = [
             File.from_path("examples/assets/iris.csv"),
         ]
-        
+
         # generate the response
         response = await session.generate_response(
             user_request, files=files
