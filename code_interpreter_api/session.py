@@ -1,23 +1,50 @@
-import uuid, base64, re, traceback
+import base64
+import re
+import traceback
+import uuid
+from dataclasses import dataclass
 from io import BytesIO
 from os import getenv
-from typing import Optional
+from typing import Callable, Literal, Optional
+
+from code_interpreter_api.agents import OpenAIFunctionsAgent
+from code_interpreter_api.chains import get_file_modifications, remove_download_link
+from code_interpreter_api.config import settings
+from code_interpreter_api.prompts import code_interpreter_system_message
+from code_interpreter_api.schema import (
+    CodeInput,
+    CodeInterpreterResponse,
+    File,
+    UserRequest,
+)
+from code_interpreter_api.utils import (
+    CodeAgentOutputParser,
+    CodeCallbackHandler,
+    CodeChatAgentOutputParser,
+)
 from codeboxapi import CodeBox  # type: ignore
 from codeboxapi.schema import CodeBoxOutput  # type: ignore
-from langchain.tools import StructuredTool, BaseTool
-from langchain.chat_models import ChatOpenAI, ChatAnthropic
+from langchain.agents import (
+    AgentExecutor,
+    BaseSingleActionAgent,
+    ConversationalAgent,
+    ConversationalChatAgent,
+)
+from langchain.chat_models import ChatAnthropic, ChatOpenAI
 from langchain.chat_models.base import BaseChatModel
-from langchain.schema.language_model import BaseLanguageModel
-from langchain.prompts.chat import MessagesPlaceholder
-from langchain.agents import AgentExecutor, BaseSingleActionAgent, ConversationalChatAgent, ConversationalAgent
 from langchain.memory import ConversationBufferMemory
+from langchain.prompts.chat import MessagesPlaceholder
+from langchain.schema.language_model import BaseLanguageModel
+from langchain.tools import BaseTool, StructuredTool
 
-from code_interpreter_api.config import settings
-from code_interpreter_api.agents import OpenAIFunctionsAgent
-from code_interpreter_api.prompts import code_interpreter_system_message
-from code_interpreter_api.chains import get_file_modifications, remove_download_link
-from code_interpreter_api.utils import CodeCallbackHandler, CodeAgentOutputParser, CodeChatAgentOutputParser
-from code_interpreter_api.schema import CodeInterpreterResponse, CodeInput, File, UserRequest
+
+@dataclass
+class Output:
+    content: str | File
+    type: Literal["code", "str", "image", "file"]
+
+
+OnOutput = Callable[[Output], None]
 
 
 class CodeInterpreterSession:
@@ -25,7 +52,7 @@ class CodeInterpreterSession:
         self,
         llm: Optional[BaseLanguageModel] = None,
         additional_tools: list[BaseTool] = [],
-        **kwargs
+        **kwargs,
     ) -> None:
         self.codebox = CodeBox()
         self.verbose = kwargs.get("verbose", settings.VERBOSE)
@@ -34,6 +61,7 @@ class CodeInterpreterSession:
         self.agent_executor: AgentExecutor = self._agent_executor()
         self.input_files: list[File] = []
         self.output_files: list[File] = []
+        self.on_output: OnOutput = lambda x: None
 
     def start(self) -> None:
         self.codebox.start()
@@ -42,6 +70,7 @@ class CodeInterpreterSession:
         if type(self.codebox) != CodeBox:
             # check if jupyter-kernel-gateway is installed
             import pkg_resources  # type: ignore
+
             try:
                 pkg_resources.get_distribution("jupyter-kernel-gateway")
             except pkg_resources.DistributionNotFound:
@@ -52,10 +81,7 @@ class CodeInterpreterSession:
                 exit(1)
         await self.codebox.astart()
 
-    def _tools(
-        self,
-        additional_tools: list[BaseTool]
-    ) -> list[BaseTool]:
+    def _tools(self, additional_tools: list[BaseTool]) -> list[BaseTool]:
         return additional_tools + [
             StructuredTool(
                 name="python",
@@ -73,10 +99,7 @@ class CodeInterpreterSession:
         ]
 
     def _choose_llm(
-        self,
-        model: str = "gpt-4",
-        openai_api_key: Optional[str] = None,
-        **kwargs
+        self, model: str = "gpt-4", openai_api_key: Optional[str] = None, **kwargs
     ) -> BaseChatModel:
         if "gpt" in model:
             openai_api_key = (
@@ -106,7 +129,9 @@ class CodeInterpreterSession:
                 llm=self.llm,
                 tools=self.tools,
                 system_message=code_interpreter_system_message,
-                extra_prompt_messages=[MessagesPlaceholder(variable_name="chat_history")],
+                extra_prompt_messages=[
+                    MessagesPlaceholder(variable_name="chat_history")
+                ],
             )
             if isinstance(self.llm, ChatOpenAI)
             else ConversationalChatAgent.from_llm_and_tools(
@@ -131,7 +156,9 @@ class CodeInterpreterSession:
             max_iterations=9,
             tools=self.tools,
             verbose=self.verbose,
-            memory=ConversationBufferMemory(memory_key="chat_history", return_messages=True),
+            memory=ConversationBufferMemory(
+                memory_key="chat_history", return_messages=True
+            ),
         )
 
     async def show_code(self, code: str) -> None:
@@ -145,6 +172,9 @@ class CodeInterpreterSession:
     async def _arun_handler(self, code: str):
         """Run code in container and send the output to the user"""
         print("Running code in container...", code)
+
+        self.on_output(Output(content=code, type="code"))
+
         output: CodeBoxOutput = await self.codebox.arun(code)
 
         if not isinstance(output.content, str):
@@ -154,7 +184,12 @@ class CodeInterpreterSession:
             filename = f"image-{uuid.uuid4()}.png"
             file_buffer = BytesIO(base64.b64decode(output.content))
             file_buffer.name = filename
-            self.output_files.append(File(name=filename, content=file_buffer.read()))
+
+            file = File(name=filename, content=file_buffer.read())
+
+            self.on_output(Output(content=file, type="image"))
+            self.output_files.append(file)
+
             return f"Image {filename} got send to the user."
 
         elif output.type == "error":
@@ -171,6 +206,7 @@ class CodeInterpreterSession:
                 print("Error:", output.content)
 
         elif modifications := await get_file_modifications(code, self.llm):
+            print("\033[34m" + str(modifications) + "\033[0m")
             for filename in modifications:
                 if filename in [file.name for file in self.input_files]:
                     continue
@@ -182,6 +218,8 @@ class CodeInterpreterSession:
                 self.output_files.append(
                     File(name=filename, content=file_buffer.read())
                 )
+
+        self.on_output(Output(content=output.content, type="str"))
 
         return output.content
 
@@ -220,8 +258,11 @@ class CodeInterpreterSession:
         user_msg: str,
         files: list[File] = [],
         detailed_error: bool = False,
+        on_output: OnOutput = lambda x: None,
     ) -> CodeInterpreterResponse:
         """Generate a Code Interpreter response based on the user's input."""
+        self.on_output = on_output
+
         user_request = UserRequest(content=user_msg, files=files)
         try:
             await self._input_handler(user_request)
