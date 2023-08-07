@@ -41,7 +41,7 @@ from langchain.tools import BaseTool, StructuredTool
 @dataclass
 class Output:
     content: str | File
-    type: Literal["code", "str", "image", "file"]
+    type: Literal["code", "str", "image", "file", "error"]
 
 
 OnOutput = Callable[[Output], None]
@@ -202,11 +202,13 @@ class CodeInterpreterSession:
             else:
                 # TODO: preanalyze error to optimize next code generation
                 pass
+
+            self.on_output(Output(conatent=output.content, type="error"))
+
             if self.verbose:
                 print("Error:", output.content)
 
         elif modifications := await get_file_modifications(code, self.llm):
-            print("\033[34m" + str(modifications) + "\033[0m")
             for filename in modifications:
                 if filename in [file.name for file in self.input_files]:
                     continue
@@ -215,11 +217,14 @@ class CodeInterpreterSession:
                     continue
                 file_buffer = BytesIO(fileb.content)
                 file_buffer.name = filename
-                self.output_files.append(
-                    File(name=filename, content=file_buffer.read())
-                )
 
-        self.on_output(Output(content=output.content, type="str"))
+                file = File(name=filename, content=file_buffer.read())
+                self.output_files.append(file)
+
+                self.on_output(Output(content=file, type="file"))
+
+        else:
+            self.on_output(Output(content=output.content, type="str"))
 
         return output.content
 
