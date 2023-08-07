@@ -7,17 +7,17 @@ from io import BytesIO
 from os import getenv
 from typing import Callable, Literal, Optional
 
-from code_interpreter_api.agents import OpenAIFunctionsAgent
-from code_interpreter_api.chains import get_file_modifications, remove_download_link
-from code_interpreter_api.config import settings
-from code_interpreter_api.prompts import code_interpreter_system_message
-from code_interpreter_api.schema import (
+from gpt_code_interpreter.agents import OpenAIFunctionsAgent
+from gpt_code_interpreter.chains import get_file_modifications, remove_download_link
+from gpt_code_interpreter.config import settings
+from gpt_code_interpreter.prompts import code_interpreter_system_message
+from gpt_code_interpreter.schema import (
     CodeInput,
     CodeInterpreterResponse,
     File,
     UserRequest,
 )
-from code_interpreter_api.utils import (
+from gpt_code_interpreter.utils import (
     CodeAgentOutputParser,
     CodeCallbackHandler,
     CodeChatAgentOutputParser,

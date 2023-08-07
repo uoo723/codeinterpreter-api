@@ -1,4 +1,4 @@
-from code_interpreter_api import CodeInterpreterSession
+from gpt_code_interpreter import CodeInterpreterSession
 import streamlit as st
 import tempfile
 import os

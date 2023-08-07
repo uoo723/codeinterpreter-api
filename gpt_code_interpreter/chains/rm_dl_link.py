@@ -2,7 +2,7 @@ from langchain.base_language import BaseLanguageModel
 from langchain.chat_models.openai import ChatOpenAI
 from langchain.schema import AIMessage, OutputParserException
 
-from code_interpreter_api.prompts import remove_dl_link_prompt
+from gpt_code_interpreter.prompts import remove_dl_link_prompt
 
 
 async def remove_download_link(

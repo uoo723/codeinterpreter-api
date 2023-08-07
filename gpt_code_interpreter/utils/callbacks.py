@@ -4,7 +4,7 @@ from langchain.schema import AgentAction
 from langchain.callbacks import AsyncIteratorCallbackHandler
 
 if TYPE_CHECKING:
-    from code_interpreter_api.session import CodeInterpreterSession
+    from gpt_code_interpreter.session import CodeInterpreterSession
 
 
 class CodeCallbackHandler(AsyncIteratorCallbackHandler):

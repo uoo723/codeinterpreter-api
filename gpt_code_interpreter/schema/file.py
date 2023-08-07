@@ -43,7 +43,7 @@ class File(BaseModel):
             from PIL import Image  # type: ignore
         except ImportError:
             print(
-                "Please install it with `pip install code_interpreter_api[image_support]` to display images."
+                "Please install it with `pip install gpt_code_interpreter[image_support]` to display images."
             )
             exit(1)
 

@@ -6,7 +6,7 @@ from langchain.agents import AgentOutputParser
 from langchain.output_parsers.json import parse_json_markdown
 from langchain.schema import AgentAction, AgentFinish, OutputParserException
 from langchain.chat_models.base import BaseChatModel
-from code_interpreter_api.chains import extract_python_code
+from gpt_code_interpreter.chains import extract_python_code
 
 
 class CodeAgentOutputParser(AgentOutputParser):

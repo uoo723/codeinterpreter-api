@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "code-interpreter-api"
+name = "gpt-code-interpreter"
 version = "0.0.1"
 description = "CodeInterpreterAPI is an (unofficial) open source python interface for the ChatGPT CodeInterpreter."
 authors = ["Shroominic <contact@shroominic.com>", "Sangwoo Han <swhan0906@gmail.com>"]

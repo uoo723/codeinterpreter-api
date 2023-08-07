@@ -6,7 +6,7 @@ and plot it for you
 """
 
 from datetime import datetime
-from code_interpreter_api import CodeInterpreterSession
+from gpt_code_interpreter import CodeInterpreterSession
 
 
 async def main():

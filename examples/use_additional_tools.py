@@ -11,7 +11,7 @@ from typing import Any
 
 from langchain.tools import tool, BaseTool
 
-from code_interpreter_api import CodeInterpreterSession
+from gpt_code_interpreter import CodeInterpreterSession
 
 
 class ExampleKnowledgeBaseTool(BaseTool):
