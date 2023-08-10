@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import re
 import traceback
@@ -7,6 +8,8 @@ from io import BytesIO
 from os import getenv
 from typing import Callable, Literal, Optional
 
+from codeboxapi import CodeBox  # type: ignore
+from codeboxapi.schema import CodeBoxOutput  # type: ignore
 from gpt_code_interpreter.agents import OpenAIFunctionsAgent
 from gpt_code_interpreter.chains import get_file_modifications, remove_download_link
 from gpt_code_interpreter.config import settings
@@ -22,8 +25,6 @@ from gpt_code_interpreter.utils import (
     CodeCallbackHandler,
     CodeChatAgentOutputParser,
 )
-from codeboxapi import CodeBox  # type: ignore
-from codeboxapi.schema import CodeBoxOutput  # type: ignore
 from langchain.agents import (
     AgentExecutor,
     BaseSingleActionAgent,
@@ -41,7 +42,7 @@ from langchain.tools import BaseTool, StructuredTool
 @dataclass
 class Output:
     content: str | File
-    type: Literal["code", "str", "image", "file", "error"]
+    type: Literal["code", "code_exec_str", "str", "image", "file", "error"]
 
 
 OnOutput = Callable[[Output], None]
@@ -62,6 +63,7 @@ class CodeInterpreterSession:
         self.input_files: list[File] = []
         self.output_files: list[File] = []
         self.on_output: OnOutput = lambda x: None
+        self.done = asyncio.Event()
 
     def start(self) -> None:
         self.codebox.start()
@@ -224,7 +226,7 @@ class CodeInterpreterSession:
                 self.on_output(Output(content=file, type="file"))
 
         else:
-            self.on_output(Output(content=output.content, type="str"))
+            self.on_output(Output(content=output.content, type="code_exec_str"))
 
         return output.content
 
@@ -270,8 +272,11 @@ class CodeInterpreterSession:
 
         user_request = UserRequest(content=user_msg, files=files)
         try:
+            self.done.clear()
             await self._input_handler(user_request)
             response = await self.agent_executor.arun(input=user_request.content)
+            output = await self._output_handler(response)
+            self.on_output(Output(content=output, type="str"))
             return await self._output_handler(response)
         except Exception as e:
             if self.verbose:
@@ -285,11 +290,14 @@ class CodeInterpreterSession:
                     content="Sorry, something went while generating your response."
                     "Please try again or restart the session."
                 )
+        finally:
+            self.done.set()
 
     async def is_running(self) -> bool:
         return await self.codebox.astatus() == "running"
 
     async def astop(self) -> None:
+        self.queue = None
         await self.codebox.astop()
 
     async def __aenter__(self) -> "CodeInterpreterSession":
